@@ -15,7 +15,7 @@ function loadEnv(file) {
   if (!fs.existsSync(file)) return;
   for (const line of fs.readFileSync(file, 'utf8').split('\n')) {
     const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*)\s*$/);
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
+    if (m && !(m[1] in process.env)) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '');
   }
 }
 loadEnv(path.join(__dirname, '.env'));
@@ -143,9 +143,10 @@ async function livePortfolio() {
 
 // ---------- demo mode: a random walk so the UI moves like a market ----------
 const demo = require('./public/demo.js').createDemo();
-setInterval(demo.tick, 3000);
+setInterval(demo.tick, 3000).unref(); // unref so tests can exit cleanly
 
 // ---------- http ----------
+const PUBLIC_DIR = path.join(__dirname, 'public');
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' };
 
 function send(res, status, body) {
@@ -175,8 +176,10 @@ const server = http.createServer(async (req, res) => {
     }
 
     // static files from ./public
-    const file = path.join(__dirname, 'public', url.pathname === '/' ? 'index.html' : url.pathname);
-    if (!file.startsWith(path.join(__dirname, 'public')) || !fs.existsSync(file)) {
+    // Only serve regular files that sit inside ./public. The trailing path.sep stops a
+    // sibling folder such as "public-old" from passing the prefix check.
+    const file = path.join(PUBLIC_DIR, url.pathname === '/' ? 'index.html' : url.pathname);
+    if (!file.startsWith(PUBLIC_DIR + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) {
       res.writeHead(404); return res.end('Not found');
     }
     res.writeHead(200, { 'Content-Type': MIME[path.extname(file)] || 'application/octet-stream' });
@@ -187,6 +190,11 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, '127.0.0.1', () => {
-  console.log(`Budget dashboard on http://localhost:${PORT}  (${DEMO ? 'DEMO mode – add T212_API_KEY to .env for live data' : 'Trading 212 ' + (process.env.T212_ENV === 'demo' ? 'practice' : 'live')})`);
-});
+// Start listening only when run directly (`node server.js`), so tests can import the server.
+if (require.main === module) {
+  server.listen(PORT, '127.0.0.1', () => {
+    console.log(`Budget dashboard on http://localhost:${PORT}  (${DEMO ? 'DEMO mode – add T212_API_KEY to .env for live data' : 'Trading 212 ' + (process.env.T212_ENV === 'demo' ? 'practice' : 'live')})`);
+  });
+}
+
+module.exports = server;
