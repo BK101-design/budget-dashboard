@@ -1,5 +1,7 @@
 # 50/30/20 Wealth Dashboard
 
+[![Tests](https://github.com/BK101-design/budget-dashboard/actions/workflows/test.yml/badge.svg)](https://github.com/BK101-design/budget-dashboard/actions/workflows/test.yml)
+
 A personal finance dashboard that combines **50/30/20 budgeting** with **live investment tracking** from Trading 212.
 
 **[▶ Try the live demo](https://bk101-design.github.io/budget-dashboard/)** – runs in your browser with a simulated portfolio, so no account is needed.
