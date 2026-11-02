@@ -1,0 +1,15 @@
+{
+  "name": "budget-dashboard",
+  "version": "1.0.0",
+  "description": "50/30/20 budget dashboard with live Trading 212 investment tracking",
+  "license": "MIT",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test",
+    "deploy": "git subtree push --prefix public origin gh-pages"
+  }
+}

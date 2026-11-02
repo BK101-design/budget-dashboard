@@ -142,49 +142,8 @@ async function livePortfolio() {
 }
 
 // ---------- demo mode: a random walk so the UI moves like a market ----------
-const demo = {
-  currency: 'GBP',
-  free: 842.17,
-  positions: [
-    { ticker: 'VUAGl_EQ', symbol: 'VUAG', name: 'Vanguard S&P 500 (Acc)', qty: 42.5, avgPrice: 78.2, price: 92.4, ccy: 'GBP' },
-    { ticker: 'AAPL_US_EQ', symbol: 'AAPL', name: 'Apple', qty: 6.2, avgPrice: 182.5, price: 231.1, ccy: 'USD' },
-    { ticker: 'MSFT_US_EQ', symbol: 'MSFT', name: 'Microsoft', qty: 3.1, avgPrice: 365, price: 418.3, ccy: 'USD' },
-    { ticker: 'VWRPl_EQ', symbol: 'VWRP', name: 'Vanguard FTSE All-World (Acc)', qty: 25, avgPrice: 104.9, price: 117.6, ccy: 'GBP' },
-    { ticker: 'NVDA_US_EQ', symbol: 'NVDA', name: 'NVIDIA', qty: 8, avgPrice: 118.4, price: 139.7, ccy: 'USD' },
-    { ticker: 'RRl_EQ', symbol: 'RR', name: 'Rolls-Royce', qty: 120, avgPrice: 412, price: 538, ccy: 'GBX' },
-  ],
-};
-const DEMO_FX = { GBP: 1, USD: 0.79, GBX: 0.01 };
-function demoTick() {
-  const market = (Math.random() - 0.5) * 0.002; // shared market move
-  for (const p of demo.positions) {
-    const idio = (Math.random() - 0.5) * 0.004;
-    p.price = Math.max(0.01, p.price * (1 + market + idio));
-  }
-}
-setInterval(demoTick, 3000);
-
-function demoPortfolio() {
-  let invested = 0, ppl = 0;
-  const positions = demo.positions.map(p => {
-    const fx = DEMO_FX[p.ccy];
-    const value = p.qty * p.price * fx;
-    const cost = p.qty * p.avgPrice * fx;
-    invested += cost; ppl += value - cost;
-    return {
-      ticker: p.ticker, symbol: p.symbol, name: p.name, qty: p.qty,
-      avgPrice: p.avgPrice, price: p.price, priceCurrency: p.ccy,
-      value, ppl: value - cost, pplPct: ((value - cost) / cost) * 100,
-    };
-  });
-  return {
-    source: 'demo',
-    currency: demo.currency,
-    cash: { free: demo.free, invested, ppl, total: demo.free + invested + ppl },
-    positions: positions.sort((a, b) => b.value - a.value),
-    ts: Date.now(),
-  };
-}
+const demo = require('./public/demo.js').createDemo();
+setInterval(demo.tick, 3000);
 
 // ---------- http ----------
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml' };
@@ -198,7 +157,7 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host}`);
   try {
     if (url.pathname === '/api/portfolio') {
-      return send(res, 200, DEMO ? demoPortfolio() : await livePortfolio());
+      return send(res, 200, DEMO ? demo.snapshot() : await livePortfolio());
     }
     if (url.pathname === '/api/quotes') {
       const symbols = (url.searchParams.get('symbols') || '').split(',').map(s => s.trim()).filter(Boolean).slice(0, 30);
